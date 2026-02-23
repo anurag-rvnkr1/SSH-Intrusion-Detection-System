@@ -1,0 +1,27 @@
+{
+  "detection": {
+    "alert_threshold": 5,
+    "window_minutes": 2,
+    "log_level": "INFO"
+  },
+  "siem": {
+    "splunk": {
+      "enabled": false,
+      "url": "https://your-splunk-instance.com:8088",
+      "token": "${SPLUNK_HEC_TOKEN}",
+      "ssl_verify": true
+    },
+    "elk": {
+      "enabled": false,
+      "url": "http://your-logstash-instance.com:8080",
+      "ssl_verify": true
+    }
+  },
+  "polling": {
+    "interval_seconds": 5,
+    "log_files": [
+      "/var/log/auth.log",
+      "/var/log/secure"
+    ]
+  }
+}
