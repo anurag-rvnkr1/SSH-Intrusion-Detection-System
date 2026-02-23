@@ -1,0 +1,49 @@
+Feb 15 10:15:23 ubuntu sshd[1234]: Invalid user admin from 192.168.1.100
+Feb 15 10:15:24 ubuntu sshd[1235]: Invalid user admin from 192.168.1.100
+Feb 15 10:15:25 ubuntu sshd[1236]: Invalid user admin from 192.168.1.100
+Feb 15 10:15:26 ubuntu sshd[1237]: Invalid user admin from 192.168.1.100
+Feb 15 10:15:27 ubuntu sshd[1238]: Invalid user admin from 192.168.1.100
+Feb 15 10:15:28 ubuntu sshd[1239]: Invalid user admin from 192.168.1.100
+Feb 15 10:15:35 ubuntu sshd[1240]: Failed password for root from 192.168.1.101 port 54321 ssh2
+Feb 15 10:15:36 ubuntu sshd[1241]: Failed password for root from 192.168.1.101 port 54322 ssh2
+Feb 15 10:15:37 ubuntu sshd[1242]: Failed password for root from 192.168.1.101 port 54323 ssh2
+Feb 15 10:15:38 ubuntu sshd[1243]: Failed password for root from 192.168.1.101 port 54324 ssh2
+Feb 15 10:15:39 ubuntu sshd[1244]: Failed password for root from 192.168.1.101 port 54325 ssh2
+Feb 15 10:16:01 ubuntu sshd[1245]: Failed password for invalid user testuser from 192.168.1.102 port 55001 ssh2
+Feb 15 10:16:02 ubuntu sshd[1246]: Failed password for invalid user testuser from 192.168.1.102 port 55002 ssh2
+Feb 15 10:16:03 ubuntu sshd[1247]: Failed password for invalid user testuser from 192.168.1.102 port 55003 ssh2
+Feb 15 10:16:04 ubuntu sshd[1248]: Failed password for invalid user testuser from 192.168.1.102 port 55004 ssh2
+Feb 15 10:16:05 ubuntu sshd[1249]: Failed password for invalid user testuser from 192.168.1.102 port 55005 ssh2
+Feb 15 10:16:10 ubuntu sshd[1250]: Failed publickey for root from 192.168.1.103 port 56001 ssh2
+Feb 15 10:16:11 ubuntu sshd[1251]: Failed publickey for root from 192.168.1.103 port 56002 ssh2
+Feb 15 10:16:12 ubuntu sshd[1252]: Failed publickey for root from 192.168.1.103 port 56003 ssh2
+Feb 15 10:16:13 ubuntu sshd[1253]: Failed publickey for root from 192.168.1.103 port 56004 ssh2
+Feb 15 10:16:14 ubuntu sshd[1254]: Failed publickey for root from 192.168.1.103 port 56005 ssh2
+Feb 15 10:16:30 ubuntu sshd[1255]: Accepted password for validuser from 192.168.1.50 port 48765 ssh2
+Feb 15 10:16:31 ubuntu sshd[1256]: pam_unix(sshd:session): session opened for user validuser by (uid=0)
+Feb 15 10:17:01 ubuntu sshd[1257]: Bad protocol version identification "SSH-2.0-INVALID" from 192.168.1.104 port 57001
+Feb 15 10:17:02 ubuntu sshd[1258]: Disconnected from 192.168.1.104 port 57002 [preauth]
+Feb 15 10:17:15 ubuntu sshd[1259]: Received disconnect from 192.168.1.105 port 58001 [preauth]
+Feb 15 10:17:16 ubuntu sshd[1260]: Received disconnect from 192.168.1.105 port 58002 [preauth]
+Feb 15 10:18:45 ubuntu sshd[1261]: Connection reset by 192.168.1.106 [preauth]
+Feb 15 10:19:01 ubuntu sshd[1262]: Invalid user root from 192.168.1.107
+Feb 15 10:19:02 ubuntu sshd[1263]: Invalid user root from 192.168.1.107
+Feb 15 10:19:03 ubuntu sshd[1264]: Invalid user root from 192.168.1.107
+Feb 15 10:19:04 ubuntu sshd[1265]: Invalid user root from 192.168.1.107
+Feb 15 10:19:05 ubuntu sshd[1266]: Invalid user root from 192.168.1.107
+Feb 15 10:19:05 ubuntu sshd[1267]: Invalid user root from 192.168.1.107
+Feb 15 10:20:11 ubuntu sshd[1268]: Failed password for user from 192.168.1.108 port 59001 ssh2
+Feb 15 10:20:12 ubuntu sshd[1269]: Failed password for user from 192.168.1.108 port 59002 ssh2
+Feb 15 10:20:13 ubuntu sshd[1270]: Failed password for user from 192.168.1.108 port 59003 ssh2
+Feb 15 10:20:14 ubuntu sshd[1271]: Failed password for user from 192.168.1.108 port 59004 ssh2
+Feb 15 10:20:15 ubuntu sshd[1272]: Failed password for user from 192.168.1.108 port 59005 ssh2
+Feb 15 10:21:30 ubuntu sshd[1273]: Invalid user administrator from 192.168.1.109
+Feb 15 10:21:31 ubuntu sshd[1274]: Invalid user administrator from 192.168.1.109
+Feb 15 10:21:32 ubuntu sshd[1275]: Invalid user administrator from 192.168.1.109
+Feb 15 10:21:33 ubuntu sshd[1276]: Invalid user administrator from 192.168.1.109
+Feb 15 10:21:34 ubuntu sshd[1277]: Invalid user administrator from 192.168.1.109
+Feb 15 10:22:45 ubuntu sshd[1278]: Received disconnect from 192.168.1.110 port 60001 [preauth]
+Feb 15 10:22:46 ubuntu sshd[1279]: Received disconnect from 192.168.1.110 port 60002 [preauth]
+Feb 15 10:22:47 ubuntu sshd[1280]: Received disconnect from 192.168.1.110 port 60003 [preauth]
+Feb 15 10:22:48 ubuntu sshd[1281]: Received disconnect from 192.168.1.110 port 60004 [preauth]
+Feb 15 10:22:49 ubuntu sshd[1282]: Received disconnect from 192.168.1.110 port 60005 [preauth]
