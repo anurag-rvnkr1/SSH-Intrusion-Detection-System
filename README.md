@@ -1,6 +1,6 @@
 # SSH Intrusion Detection System (IDS)
 
-A production-ready Python-based system that monitors Linux authentication logs in real time, detects SSH brute-force attacks, and forwards alerts to SIEM platforms (Splunk and ELK)..
+A production-ready Python-based system that monitors Linux authentication logs in real time, detects SSH brute-force attacks, and forwards alerts to SIEM platforms (Splunk and ELK).
 
 ## Table of Contents
 
