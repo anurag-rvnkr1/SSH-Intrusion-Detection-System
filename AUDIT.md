@@ -279,9 +279,9 @@ documentation changes when this review began; those were inspected and
 preserved. During the review the branch advanced to commit
 `2c76b8e` (`Add comprehensive tests for SSH brute force detection and log
 parsing`); this update did not create that commit. The tracked inventory
-contains 92 files. Python runtime, tests, fixtures, configuration, scripts,
-requirements, CI, Markdown guides, and frontend source/config/assets were
-inventoried. No Docker files are present.
+contained 115 files by the final verification. Python runtime, tests, fixtures,
+configuration, scripts, requirements, CI, Markdown guides, and frontend
+source/config/assets were inventoried. No Docker files are present.
 
 ### File-level audit
 
@@ -337,3 +337,59 @@ The changes do not make this project production-certified. Persistent detection
 state, log-rotation race handling, synchronous SIEM dispatch, host-specific
 access control, and frontend/dashboard integration remain operational or
 future-work limitations.
+
+## Independent final verification (2026-11-01)
+
+At the start of this verification, the branch was `main` at `2c76b8e`, with
+pre-existing modifications in `AUDIT.md`, `README.md`, `ssh_ids/src/parser.py`,
+`ssh_ids/src/utils.py`, `ssh_ids/tests/simulate_attacks.py`, and three related
+test files. The branch subsequently advanced to `418beb0` while these checks
+were in progress; this verification did not create that commit or run
+commit/reset/checkout operations. The final review added documentation updates
+in `AUDIT.md`, `README.md`, and `docs/TESTING.md`; those three files are
+modified in the current worktree. `main` is two commits ahead of `origin/main`.
+The recorded inventory was 115 tracked files. No frontend files were modified.
+
+### Reproduced automated checks
+
+- `python3 -m pytest`: **146 passed**.
+- Required core coverage command with `--cov-fail-under=90`: **146 passed,
+  95.33% aggregate coverage**.
+- `ruff check ssh_ids`: passed.
+- `ruff format --check ssh_ids`: passed.
+- `mypy ssh_ids/src`: passed.
+- `bandit -q -r ssh_ids/src ssh_ids/tests/simulate_attacks.py -ll`: passed.
+- `git diff --check`, configuration JSON parsing, `bash -n install.sh run.sh`,
+  CLI help, and CLI version checks: passed.
+- Python version for these checks: **3.14.2**. The workflow's Python 3.10–3.14
+  matrix and GitHub-hosted CI were not run as part of this verification.
+
+### Isolated CLI end-to-end run
+
+The simulator generated ten chronological local log records from
+`198.51.100.25` (two five-record bursts) with seed 17 into a managed temporary
+directory. The CLI parsed the file and generated exactly one alert at threshold
+5; the second burst fell inside the configured cooldown. Alert JSONL included
+timestamp `2024-01-01T00:00:00+00:00`, source IP, username `root`, attempt and
+threshold counts, detection rule `ssh_failed_authentication_burst`, severity,
+and five event details. A separate four-failure test generated neither an
+alert nor an alert file. Replaying the positive log with a newly started
+process appended a second alert, confirming alert-file persistence while
+detection/cooldown state resets on restart. All temporary files were removed.
+The metadata of `/var/log/auth.log` and `/var/log/secure` was unchanged during
+the run.
+
+### Frontend and SIEM verification
+
+- `./node_modules/.bin/tsc --noEmit`: passed.
+- `npm run build`: compiled successfully, but generated only `/404`; the
+  Next.js config skips build-time type validation.
+- `npm run lint`: failed because `eslint` is not installed.
+- The frontend has no IDS page/dashboard route, no API connection to Python,
+  and displays no live detections. It is a UI scaffold only.
+- Splunk HEC and Logstash payload, HTTP, retry, and error cases are mocked in
+  tests. No live SIEM credentials or endpoints were used.
+
+The final verification used no privileged log access, modified no real
+authentication logs, and does not establish operational certification or
+production readiness.

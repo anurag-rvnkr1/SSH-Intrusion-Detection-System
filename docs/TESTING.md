@@ -68,4 +68,21 @@ The frontend is separate from the IDS. `./node_modules/.bin/tsc --noEmit` is a d
 TypeScript check. The checked-in Next.js config skips type validation during
 `next build`, so run the TypeScript command separately. The `npm run lint`
 script requires ESLint, which is not listed in the frontend dev dependencies
-in the inspected worktree.
+in the inspected worktree. On 2026-11-01, TypeScript validation passed and
+`npm run build` compiled successfully but generated only `/404`; `npm run lint`
+failed with `eslint: not found`. There is no IDS dashboard route or Python API
+connection.
+
+## Latest verified results
+
+On Python 3.14.2, `python3 -m pytest` passed **146 tests**. The coverage command
+above passed with **95.33% aggregate core coverage**, exceeding the 90%
+threshold. Ruff lint/format, mypy, Bandit, CLI/config smoke checks, shell
+syntax, and `git diff --check` passed.
+
+An isolated end-to-end CLI run generated ten local events in two bursts and
+verified one threshold alert, cooldown suppression, alert JSONL persistence,
+and the expected second alert after process restart/replay. A four-event run
+produced no alert. These tests do not require root, modify real auth logs, or
+contact SIEM services. SIEM delivery has mocked tests only; CI has not yet run
+on GitHub.

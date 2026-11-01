@@ -342,13 +342,19 @@ Tests use temporary directories, deterministic timestamps, and mocked HTTP; they
 
 ### Latest local verification
 
-On 2026-11-01, the full suite passed **140 tests** with **95.30% aggregate
-coverage** on Python 3.14.2. Ruff formatting/lint, mypy, Bandit, CLI/config
-smoke checks, and installation plus tests in a clean virtual environment also
-passed. The GitHub workflow has not been run remotely. The frontend TypeScript
-check passed, but its build produced only `/404`, and `npm run lint` could not
-run because ESLint is not installed; these results do not indicate a working
-IDS dashboard.
+On 2026-11-01, final local verification passed **146 tests** with **95.33%
+aggregate core coverage** on Python 3.14.2. `ruff check`, `ruff format
+--check`, mypy, Bandit, CLI/config smoke checks, shell syntax, and
+`git diff --check` passed. A separate isolated CLI demonstration generated
+ten chronological records, produced one alert at the five-failure threshold,
+suppressed the second burst during cooldown, verified that four failures
+produce no alert, and confirmed that replay after restart appends another
+alert because detector state is in-memory. Temporary fixtures were cleaned
+up; system authentication-log metadata was unchanged. The GitHub workflow has
+not been run remotely. Frontend TypeScript validation and `next build`
+completed, but the build contains only `/404` and skips type validation;
+`npm run lint` fails because ESLint is not installed. These checks do not
+indicate a working IDS dashboard or live SIEM integration.
 
 ## Troubleshooting
 
