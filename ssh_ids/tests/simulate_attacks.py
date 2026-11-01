@@ -66,8 +66,7 @@ class AttackSimulator:
         self.log_file = _validate_output(Path(log_file))
         self.random = random.Random(seed)
         if start_time is None and seed is not None:
-            now = datetime.now(timezone.utc)
-            start_time = datetime(max(1, now.year - 1), 12, 31, tzinfo=timezone.utc)
+            start_time = datetime(2024, 1, 1, tzinfo=timezone.utc)
         self.start_time = self._normalize_time(start_time or datetime.now(timezone.utc))
 
     @staticmethod

@@ -270,3 +270,70 @@ network traffic.
 No live SIEM, Ubuntu 24.04 host, or GitHub Actions run was available. This
 validation does not establish production readiness. Persistent state remains
 limited to JSONL alerts; detector/cooldown/deduplication state is in memory.
+
+## Repository-wide audit and verification update (2026-11-01)
+
+This update supersedes the earlier test and coverage counts above. The
+worktree already contained extensive uncommitted implementation, test, and
+documentation changes when this review began; those were inspected and
+preserved. During the review the branch advanced to commit
+`2c76b8e` (`Add comprehensive tests for SSH brute force detection and log
+parsing`); this update did not create that commit. The tracked inventory
+contains 92 files. Python runtime, tests, fixtures, configuration, scripts,
+requirements, CI, Markdown guides, and frontend source/config/assets were
+inventoried. No Docker files are present.
+
+### File-level audit
+
+| File path | Purpose and verified functionality | Finding at audit and severity (current status) | Repair or disposition | Validation |
+|---|---|---|---|---|
+| `ssh_ids/src/main.py` | Canonical argparse CLI; polling loop, local persistence, independent SIEM dispatch, signal shutdown and delivery counters. | No blocking defect found; Low residual risk from synchronous delivery. | Preserve; retain one documented `python -m` entry point. | `test_cli.py`, CLI help/version smoke checks. |
+| `ssh_ids/src/detector.py` | Configured readers, per-IP bounded event-time windows, deduplication/cooldown, structured alerts and in-memory recent history. | Tracker/cooldown state is not restart-persistent; Medium limitation. | Document state semantics; persistence remains a future enhancement rather than hidden behavior. | `test_detection.py`, including boundary, out-of-order, cooldown, cleanup, multiple-IP and end-to-end cases. |
+| `ssh_ids/src/parser.py` | Bounded incremental reader and OpenSSH parser for authentication, connection and security events; UTC-normalized timestamps and IPv4/IPv6 validation. | Oversized untrusted PID conversion could crash parsing; Medium robustness defect, fixed in this review. | Bound PID conversion and retain otherwise valid records with `process_id=None`. | `test_parser.py` includes an oversized PID regression; `test_file_reader.py` covers file lifecycle. |
+| `ssh_ids/src/utils.py` | Config loading/validation, environment expansion, safe-path checks, timestamp/IP utilities and rolling-window helper. | Dashed auth-log rotations were not blocked (High simulator-safety gap) and Splunk token types were unchecked (Medium); both fixed in this review. | Protect dotted/dashed rotations and require non-empty string tokens. | `test_simulator.py` protected-path cases; `test_config.py` invalid token cases. |
+| `ssh_ids/src/sender.py` | Splunk HEC and Logstash JSON senders with timeouts, TLS verification, bounded transient retries and status metrics. | Synchronous network retries can delay polling; Medium documented operational limitation. No live SIEM has been tested. | Keep behavior bounded/configurable; use mocked HTTP tests and document that live SIEM delivery remains unverified. | `test_sender.py` mocks payload, response, TLS, timeout and retry behavior. |
+| `ssh_ids/src/alert_store.py` | Private, append-only JSONL persistence with path/symlink and ownership/mode checks. | JSONL grows until operator-managed rotation; Low operational limitation. | Document local retention/rotation; do not silently prune alert history. | `test_alert_store.py` checks permissions, append/reopen and path rejection. |
+| `ssh_ids/tests/simulate_attacks.py` | Generates local synthetic OpenSSH records; exclusive private-file output and print-only CLI; no network traffic. | Seeded default timestamps changed with calendar year, weakening cross-year determinism; Medium requirement gap, fixed in this review. | Use a fixed UTC epoch when a seed is supplied and no explicit start time is given. | `test_simulator.py` checks stable seeded output, chronology, safe destination and detector compatibility. |
+| `ssh_ids/tests/test_config.py` | Configuration, environment, path, bounds, and SIEM validation tests. | No remaining gap identified in reviewed requirements. | Preserve and extend when config behavior changes. | Full pytest suite. |
+| `ssh_ids/tests/test_detection.py` | Event-time tracker and detector alert tests, including synthetic-log E2E. | Covers current in-memory semantics; no durable tracker-state behavior is claimed. | Preserve; add persistence tests only with a future persistence design. | Full pytest suite and coverage. |
+| `ssh_ids/tests/test_file_reader.py` | Append, partial line, missing file, truncation, rotation, read limit and permission tests. | Filesystem rotation races remain inherently possible. | Keep the limitation explicit; test deterministic rotation behavior. | Full pytest suite. |
+| `ssh_ids/tests/test_parser.py` | Classification, metadata, timezones, malformed inputs and fixture coverage. | Oversized PID conversion regression added in this review. | Bound conversion without discarding otherwise valid events. | Full pytest suite. |
+| `ssh_ids/tests/test_sender.py` | Mocked HEC/Logstash payload, TLS, response, retry and failure behavior. | No real SIEM is available in this environment. | No credential or network dependency added. | Full pytest suite. |
+| `ssh_ids/tests/test_simulator.py` | Safe default, protected aliases, file modes, seed, scenarios and script invocation tests. | Adds dashed auth-log rotation and cross-year deterministic timestamp cases. | Preserve tests as safety gates. | Full pytest suite. |
+| `ssh_ids/tests/test_cli.py` | CLI/config selection, test-mode restrictions, alert recording and shutdown behavior. | No real authentication-log monitoring run performed. | Keep all tests filesystem-local. | Full pytest suite and CLI smoke checks. |
+| `ssh_ids/tests/test_alert_store.py` | Local alert file persistence and filesystem safety tests. | No disk-quota/retention policy is implemented. | Document operator-managed retention. | Full pytest suite. |
+| `ssh_ids/tests/sample_auth.log` | Synthetic SSH sample records used by parser fixture tests. | Not a production log and not a real attack trace. | Preserve as clearly synthetic test data. | `test_parser.py` parses supported and non-failure records. |
+| `ssh_ids/config/config.json` | Default detector threshold, polling paths, SIEM toggles and local alert destination. | Default OS log paths vary by distribution and access policy; Low deployment concern. | Document host-specific path selection and least privilege. | JSON parser smoke check; configuration tests use temporary paths. |
+| `ssh_ids/__init__.py`, `ssh_ids/src/__init__.py`, `ssh_ids/tests/__init__.py` | Explicit Python package boundaries. | No issue found. | Preserve canonical package imports. | Imports exercised by pytest and module CLI. |
+| `install.sh`, `run.sh` | Non-root venv install and cwd-independent module launcher. | Runtime installation does not include developer tooling by design. | Keep development setup separately documented. | `bash -n`; documented module command verified. |
+| `requirements.txt`, `requirements-dev.txt`, `pyproject.toml` | Runtime dependency declaration and test/lint/type configuration. | Runtime intentionally has no third-party dependency. | Preserve minimal dependency surface. | Development tools and all configured checks ran locally. |
+| `.gitignore`, `.env.example` | Excludes credentials, virtualenv/cache/log artifacts and documents secret variable names without credentials. | `.env` is not auto-loaded; Medium usability constraint. | Document shell/secret-manager setup and never silently load secrets. | Config environment-variable tests; diff/secret review. |
+| `.github/workflows/ci.yml` | Python 3.10–3.14 matrix with Ruff, mypy, Bandit and coverage-enforced pytest. | GitHub-hosted workflow has not been run; Low verification limitation. | Verify Actions after push; do not claim remote CI success. | YAML/config reviewed; equivalent current-environment checks run locally. |
+| `README.md`, `docs/ARCHITECTURE.md`, `docs/DEMO_WALKTHROUGH.md`, `docs/SIEM_INTEGRATION.md`, `docs/TESTING.md`, `docs/UBUNTU_SETUP.md` | Operator setup, architecture, safe demo, SIEM, tests and limitations. | Must remain aligned with implementation; simulator seed semantics corrected in README during this review. | Keep production readiness explicitly unclaimed and revise docs with behavior changes. | Commands and examples cross-checked against source; CLI/config smoke checks. |
+| `app/`, `components/`, `hooks/`, `lib/`, `styles/`, `public/`, `components.json`, `next.config.mjs`, `package.json`, `package-lock.json`, `next-env.d.ts`, `postcss.config.mjs`, `tsconfig.json` | Separate Next.js/React scaffold, reusable UI components, assets and frontend build configuration. | No IDS page/API integration; template metadata remains, build skips TypeScript checks, and ESLint is absent. Medium scope gap; no Python IDS functionality depends on this UI. | Preserve the pre-existing frontend worktree; document it as a scaffold, not a dashboard. | Previously recorded `tsc`/Next checks are not a claim of IDS UI functionality; current task validates Python. |
+
+### Additional fixes in this update
+
+- Protected `/var/log/auth.log-*` rotation names as well as the canonical
+  path, dotted rotations, `/var/log/secure` variants, and resolved symlinks.
+- Bounded SSH daemon PID parsing so malformed oversized integers cannot crash
+  a parser call.
+- Made seeded simulator output independent of the current calendar year when
+  no explicit start time is passed.
+- Rejected enabled Splunk configurations with non-string or whitespace-only
+  tokens.
+
+### Latest local validation
+
+- `python3 -m pytest --cov=ssh_ids.src.utils --cov=ssh_ids.src.parser --cov=ssh_ids.src.detector --cov=ssh_ids.src.sender --cov=ssh_ids.src.alert_store --cov=ssh_ids.tests.simulate_attacks --cov-report=term-missing --cov-fail-under=90`: **146 passed**, **95.33% aggregate coverage**.
+- `ruff check ssh_ids` and `ruff format --check ssh_ids`: passed.
+- `mypy ssh_ids/src`: passed.
+- `bandit -q -r ssh_ids/src ssh_ids/tests/simulate_attacks.py -ll`: passed.
+- Config JSON validation, CLI help/version, `bash -n install.sh run.sh`, and `git diff --check`: passed.
+- Validation ran on Python 3.14.2 only. The Python 3.10–3.14 CI matrix is configured but has not run on GitHub in this review.
+- Tests use local temporary files and mocked HTTP; no root, real SIEM credential, or internet access was used. No live Ubuntu VM, real-log access, or SIEM service was available.
+
+The changes do not make this project production-certified. Persistent detection
+state, log-rotation race handling, synchronous SIEM dispatch, host-specific
+access control, and frontend/dashboard integration remain operational or
+future-work limitations.

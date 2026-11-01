@@ -179,6 +179,16 @@ def test_direct_parser_input_is_bounded_before_pattern_matching():
     assert len(entry.raw_line) <= 8192
 
 
+def test_extremely_long_process_id_does_not_crash_record_parsing():
+    entry = PARSER.parse_line(
+        f"Feb 15 10:15:23 ubuntu sshd[{'9' * 5000}]: "
+        "Failed password for admin from 192.0.2.31 port 22",
+        current_year=2024,
+    )
+    assert entry is not None
+    assert entry.process_id is None
+
+
 def test_timezone_naive_iso_timestamp_is_assigned_local_timezone():
     entry = PARSER.parse_line(
         line("Failed password for root from 192.0.2.32", "2024-02-15T10:15:23")

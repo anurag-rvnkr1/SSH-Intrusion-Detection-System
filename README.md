@@ -222,7 +222,7 @@ python3 -m ssh_ids.tests.simulate_attacks \
   --username admin --attempts-per-attack 5 --seed 17
 ```
 
-Other supported scenarios are `successful-login` and `preauth-scan`. You can supply repeated `--source-ip` and `--username` options, set `--num-attacks`, `--window-seconds`, or choose an explicit `--log-file`. A random seed makes generated random values reproducible; use a fixed `--start-time` through the Python API for byte-for-byte repeatability across runs.
+Other supported scenarios are `successful-login` and `preauth-scan`. You can supply repeated `--source-ip` and `--username` options, set `--num-attacks`, `--window-seconds`, or choose an explicit `--log-file`. A random seed makes generated records, including their default timestamp, reproducible; an explicit timezone-aware `start_time` can be supplied through the Python API when another event date is required.
 
 Never use `sudo` with the simulator. The program blocks canonical, rotated, and symlink-resolved aliases of `/var/log/auth.log` and `/var/log/secure`.
 

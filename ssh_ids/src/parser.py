@@ -161,7 +161,12 @@ class SSHLogParser:
         source_port = int(port_match.group(1)) if port_match else None
         if source_port is not None and not 1 <= source_port <= 65535:
             source_port = None
-        process_id = int(header.group("pid")) if header.group("pid") else None
+        pid_text = header.group("pid")
+        process_id = None
+        if pid_text and len(pid_text) <= 10:
+            candidate_pid = int(pid_text)
+            if 1 <= candidate_pid <= 2_147_483_647:
+                process_id = candidate_pid
         return LogEntry(
             timestamp=timestamp,
             hostname=header.group("hostname"),

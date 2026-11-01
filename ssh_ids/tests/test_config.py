@@ -138,6 +138,18 @@ def test_enabled_destination_requires_valid_url_and_secret(tmp_path):
         validate_config(config, tmp_path)
 
 
+@pytest.mark.parametrize("token", [1, [], {}, "  "])
+def test_enabled_splunk_requires_nonempty_string_token(token, tmp_path):
+    config = valid_config()
+    config["siem"]["splunk"] = {
+        "enabled": True,
+        "url": "https://splunk.example",
+        "token": token,
+    }
+    with pytest.raises(ValueError, match="token is required as a non-empty string"):
+        validate_config(config, tmp_path)
+
+
 def test_disabled_destination_does_not_require_endpoint_or_secret(tmp_path):
     result = validate_config(valid_config(), tmp_path)
     assert result["siem"]["splunk"]["enabled"] is False

@@ -18,7 +18,7 @@ from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 _ENV_PATTERN = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
-_PROTECTED_AUTH_LOG = re.compile(r"^(?:auth\.log(?:\..*)?|secure(?:[-.].*)?)$", re.I)
+_PROTECTED_AUTH_LOG = re.compile(r"^(?:auth\.log(?:[-.].*)?|secure(?:[-.].*)?)$", re.I)
 _MAX_DETECTION_WINDOW_MINUTES = 10080
 _MAX_COOLDOWN_SECONDS = 2592000
 _MAX_FUTURE_TOLERANCE_SECONDS = 86400
@@ -202,8 +202,12 @@ def validate_config(config: dict[str, Any], base_dir: Path | None = None) -> dic
             parsed = urlparse(url) if isinstance(url, str) else None
             if not parsed or parsed.scheme not in {"http", "https"} or not parsed.netloc:
                 raise ValueError(f"siem.{destination}.url must be an http or https URL")
-            if destination == "splunk" and not destination_config.get("token"):
-                raise ValueError("siem.splunk.token is required when Splunk is enabled")
+            if destination == "splunk":
+                token = destination_config.get("token")
+                if not isinstance(token, str) or not token.strip():
+                    raise ValueError(
+                        "siem.splunk.token is required as a non-empty string when Splunk is enabled"
+                    )
             if destination == "elk" and "headers" in destination_config:
                 headers = destination_config["headers"]
                 if not isinstance(headers, dict) or any(

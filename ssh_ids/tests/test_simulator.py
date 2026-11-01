@@ -25,7 +25,13 @@ def test_default_simulator_destination_is_private_test_file():
 
 @pytest.mark.parametrize(
     "path",
-    ["/var/log/auth.log", "/var/log/secure", "/var/log/auth.log.1", "/var/log/secure-2024"],
+    [
+        "/var/log/auth.log",
+        "/var/log/secure",
+        "/var/log/auth.log.1",
+        "/var/log/auth.log-2024",
+        "/var/log/secure-2024",
+    ],
 )
 def test_protected_system_auth_logs_are_rejected(path):
     assert is_protected_auth_log(path)
@@ -74,10 +80,11 @@ def test_simulator_records_are_valid_chronological_and_seed_deterministic():
     assert {entry.source_ip for entry in parsed if entry is not None} == {"192.0.2.90"}
 
 
-def test_seed_alone_produces_repeatable_records_within_the_same_year():
-    assert AttackSimulator(seed=99).generate_entries(attempts_per_attack=3) == (
-        AttackSimulator(seed=99).generate_entries(attempts_per_attack=3)
-    )
+def test_seed_alone_produces_repeatable_records_independent_of_current_year():
+    first = AttackSimulator(seed=99).generate_entries(attempts_per_attack=3)
+    second = AttackSimulator(seed=99).generate_entries(attempts_per_attack=3)
+    assert first == second
+    assert first[0].startswith("2024-01-01T")
 
 
 @pytest.mark.parametrize("scenario", ["successful-login", "preauth-scan"])
