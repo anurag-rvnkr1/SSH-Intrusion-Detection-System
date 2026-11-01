@@ -2,13 +2,17 @@
   "detection": {
     "alert_threshold": 5,
     "window_minutes": 2,
+    "cooldown_seconds": 120,
+    "future_tolerance_seconds": 60,
+    "max_tracked_ips": 1024,
+    "max_events_per_ip": 256,
+    "max_alert_history": 1000,
     "log_level": "INFO"
   },
   "siem": {
     "splunk": {
       "enabled": false,
       "url": "https://your-splunk-instance.com:8088",
-      "token": "${SPLUNK_HEC_TOKEN}",
       "ssl_verify": true
     },
     "elk": {
@@ -19,9 +23,14 @@
   },
   "polling": {
     "interval_seconds": 5,
+    "max_bytes_per_poll": 1048576,
+    "initial_read": "end",
     "log_files": [
       "/var/log/auth.log",
       "/var/log/secure"
     ]
+  },
+  "alerts": {
+    "local_file": "../data/alerts.jsonl"
   }
 }

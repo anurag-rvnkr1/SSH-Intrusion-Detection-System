@@ -1,12 +1,1 @@
-# SSH Intrusion Detection System Requirements
-# Python 3.9+
-
-# Core dependencies
-# (None required - using Python standard library only)
-
-# Optional dependencies for enhanced logging
-# python-json-logger>=2.0.4  # For structured JSON logging
-
-# Testing dependencies (optional)
-# pytest>=7.0
-# pytest-cov>=4.0
+# Core SSH IDS runtime uses only the Python standard library.

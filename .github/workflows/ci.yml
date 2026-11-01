@@ -1,0 +1,28 @@
+name: Python CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install development requirements
+        run: python -m pip install -r requirements-dev.txt
+      - name: Lint
+        run: ruff check ssh_ids
+      - name: Type check
+        run: mypy ssh_ids/src
+      - name: Security lint
+        run: bandit -q -r ssh_ids/src ssh_ids/tests/simulate_attacks.py -ll
+      - name: Test with coverage
+        run: pytest --cov=ssh_ids.src.utils --cov=ssh_ids.src.parser --cov=ssh_ids.src.detector --cov=ssh_ids.src.sender --cov=ssh_ids.src.alert_store --cov=ssh_ids.tests.simulate_attacks --cov-report=term-missing --cov-fail-under=90

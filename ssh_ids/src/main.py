@@ -1,171 +1,162 @@
 #!/usr/bin/env python3
-"""
-SSH Intrusion Detection System - Main Application
-Monitors SSH logs and forwards alerts to SIEM.
-"""
+"""Canonical CLI entry point for the SSH intrusion detection system."""
 
-import sys
-import os
-import signal
-import time
+from __future__ import annotations
+
+import argparse
 import json
 import logging
+import signal
+import sys
+import threading
+import time
 from pathlib import Path
-from typing import Optional
+from typing import Sequence
 
-# Add src to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+from .alert_store import LocalAlertStore
+from .detector import SSHBruteForceDetector
+from .sender import SIEMIntegration
+from .utils import is_protected_auth_log, load_config, setup_logger
 
-from detector import SSHBruteForceDetector
-from sender import SIEMIntegration
-from utils import setup_logger, load_config
+__version__ = "1.0.0"
+_DEFAULT_CONFIG = Path(__file__).resolve().parents[1] / "config" / "config.json"
 
 
 class SSHIDSApplication:
-    """
-    Main SSH IDS application.
-    """
-    
-    def __init__(self, config_path: str):
-        """
-        Initialize application.
-        
-        Args:
-            config_path: Path to config.json
-        """
-        # Load configuration
+    """Coordinate configured log readers, local alerts, and optional SIEM delivery."""
+
+    def __init__(
+        self,
+        config_path: str | Path,
+        log_file: str | Path | None = None,
+        test_mode: bool = False,
+        verbose: bool = False,
+    ):
         self.config = load_config(config_path)
-        
-        # Setup logging
-        log_level = self.config.get('detection', {}).get('log_level', 'INFO')
-        self.logger = setup_logger('ssh-ids', log_level)
-        
-        # Initialize detector
+        if log_file is not None:
+            path = Path(log_file).expanduser().resolve()
+            self.config["polling"]["log_files"] = [str(path)]
+        if test_mode:
+            if any(is_protected_auth_log(path) for path in self.config["polling"]["log_files"]):
+                raise ValueError(
+                    "--test-mode requires a dedicated test log, not a system authentication log"
+                )
+            self.config["polling"]["initial_read"] = "beginning"
+        log_level = "DEBUG" if verbose else self.config["detection"]["log_level"]
+        self.logger = setup_logger("ssh_ids", log_level)
         self.detector = SSHBruteForceDetector(self.config)
-        self.logger.info("SSH IDS detector initialized")
-        
-        # Initialize SIEM integration
-        self.siem = SIEMIntegration(self.config.get('siem', {}))
-        
-        # Polling configuration
-        self.polling_interval = self.config.get('polling', {}).get('interval_seconds', 5)
-        
-        # Running state
-        self.running = False
+        self.siem = SIEMIntegration(self.config["siem"])
+        alert_path = self.config["alerts"].get("local_file")
+        self.alert_store = LocalAlertStore(alert_path) if alert_path else None
+        self.polling_interval = self.config["polling"]["interval_seconds"]
+        self.test_mode = test_mode
+        self._stop = threading.Event()
+        self._start_time: float | None = None
         self.stats = {
-            'processed_alerts': 0,
-            'sent_alerts': 0,
-            'failed_sends': 0,
-            'start_time': None,
+            "processed_alerts": 0,
+            "sent_alerts": 0,
+            "failed_sends": 0,
         }
-        
-        # Setup signal handlers
-        signal.signal(signal.SIGTERM, self._signal_handler)
-        signal.signal(signal.SIGINT, self._signal_handler)
-    
-    def run(self) -> None:
-        """
-        Main application loop.
-        """
-        self.running = True
-        self.stats['start_time'] = time.time()
-        self.logger.info("SSH IDS application started")
-        
-        try:
-            while self.running:
-                try:
-                    # Process logs and get alerts
-                    alerts = self.detector.process_logs()
-                    self.stats['processed_alerts'] += len(alerts)
-                    
-                    # Send alerts to SIEM
-                    for alert in alerts:
-                        if self.siem.send_alert(alert):
-                            self.stats['sent_alerts'] += 1
-                            self._log_alert(alert)
-                        else:
-                            self.stats['failed_sends'] += 1
-                    
-                    # Wait before next poll
-                    time.sleep(self.polling_interval)
-                
-                except KeyboardInterrupt:
-                    break
-                except Exception as e:
-                    self.logger.error(f"Error in main loop: {e}", exc_info=True)
-                    time.sleep(self.polling_interval)
-        
-        finally:
-            self.shutdown()
-    
-    def _log_alert(self, alert: dict) -> None:
-        """
-        Log alert details.
-        
-        Args:
-            alert: Alert dictionary
-        """
-        self.logger.warning(
-            f"SSH BRUTE-FORCE DETECTED: "
-            f"Source IP={alert['source_ip']}, "
-            f"Attempts={alert['attempts']}, "
-            f"User={alert['username']}"
-        )
-    
-    def _signal_handler(self, signum, frame) -> None:
-        """Handle shutdown signals."""
-        self.logger.info(f"Received signal {signum}, shutting down...")
-        self.running = False
-    
-    def shutdown(self) -> None:
-        """Gracefully shutdown application."""
-        self.logger.info("Shutting down SSH IDS")
-        
-        # Stop detector
-        self.detector.shutdown()
-        
-        # Log final statistics
-        runtime = time.time() - self.stats['start_time']
+
+    def run(self) -> int:
+        """Monitor until signalled; always close readers and report final counters."""
+        self._start_time = time.monotonic()
         self.logger.info(
-            f"Statistics: "
-            f"Alerts Generated={self.stats['processed_alerts']}, "
-            f"Alerts Sent={self.stats['sent_alerts']}, "
-            f"Failed Sends={self.stats['failed_sends']}, "
-            f"Runtime={runtime:.1f}s"
+            "Starting %s; monitoring: %s",
+            "local test logs" if self.test_mode else "configured authentication logs",
+            ", ".join(self.config["polling"]["log_files"]),
         )
-        
-        self.running = False
+        self.logger.info(
+            "SIEM destinations: %s",
+            ", ".join(sender.destination for sender in self.siem.senders) or "disabled",
+        )
+        previous_handlers = {}
+        try:
+            for signum in (signal.SIGINT, signal.SIGTERM):
+                previous_handlers[signum] = signal.getsignal(signum)
+                signal.signal(signum, self._signal_handler)
+            while not self._stop.is_set():
+                alerts = self.detector.process_logs()
+                self.stats["processed_alerts"] += len(alerts)
+                for alert in alerts:
+                    self._log_alert(alert)
+                    result = self.siem.send_alert(alert)
+                    if result is True:
+                        self.stats["sent_alerts"] += 1
+                    elif result is False:
+                        self.stats["failed_sends"] += 1
+                self._stop.wait(self.polling_interval)
+            return 0
+        except KeyboardInterrupt:
+            self.logger.info("Shutdown requested")
+            return 0
+        except (OSError, ValueError) as error:
+            self.logger.error("Application stopped: %s", error)
+            return 1
+        finally:
+            for signum, handler in previous_handlers.items():
+                signal.signal(signum, handler)
+            self.shutdown()
+
+    def _log_alert(self, alert: dict) -> None:
+        """Record every generated alert locally, regardless of SIEM status."""
+        if self.alert_store is not None:
+            try:
+                self.alert_store.append(alert)
+            except (OSError, ValueError, TypeError) as error:
+                self.logger.error("Unable to persist local alert (%s)", type(error).__name__)
+        self.logger.warning("SSH IDS alert: %s", json.dumps(alert, sort_keys=True))
+
+    def _signal_handler(self, signum: int, _frame: object) -> None:
+        self.logger.info("Received signal %s; shutting down", signum)
+        self._stop.set()
+
+    def shutdown(self) -> None:
+        """Close resources and emit final delivery statistics."""
+        self.detector.shutdown()
+        runtime = time.monotonic() - self._start_time if self._start_time is not None else 0.0
+        self.logger.info(
+            "Statistics: alerts=%d delivered=%d failed_deliveries=%d runtime=%.1fs",
+            self.stats["processed_alerts"],
+            self.stats["sent_alerts"],
+            self.stats["failed_sends"],
+            runtime,
+        )
 
 
-def main():
-    """
-    Main entry point.
-    """
-    # Determine config path
-    if len(sys.argv) > 1:
-        config_path = sys.argv[1]
-    else:
-        # Default to config/config.json relative to script location
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        config_path = os.path.join(script_dir, '..', 'config', 'config.json')
-    
-    # Verify config exists
-    if not os.path.exists(config_path):
-        print(f"ERROR: Config file not found: {config_path}", file=sys.stderr)
-        print(f"Usage: python3 main.py [config_path]", file=sys.stderr)
-        sys.exit(1)
-    
-    # Run application
+def build_argument_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Monitor SSH logs and detect brute-force activity."
+    )
+    parser.add_argument(
+        "--config", type=Path, default=_DEFAULT_CONFIG, help="JSON configuration file"
+    )
+    parser.add_argument(
+        "--test-mode", action="store_true", help="Read dedicated local test logs from the beginning"
+    )
+    parser.add_argument(
+        "--log-file", type=Path, help="Monitor this single log instead of configured paths"
+    )
+    parser.add_argument("--verbose", action="store_true", help="Enable debug logging")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
+    return parser
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = build_argument_parser().parse_args(argv)
     try:
-        app = SSHIDSApplication(config_path)
-        app.run()
-        sys.exit(0)
-    except Exception as e:
-        print(f"FATAL ERROR: {e}", file=sys.stderr)
-        import traceback
-        traceback.print_exc()
-        sys.exit(1)
+        app = SSHIDSApplication(
+            args.config,
+            log_file=args.log_file,
+            test_mode=args.test_mode,
+            verbose=args.verbose,
+        )
+        return app.run()
+    except (OSError, ValueError) as error:
+        logging.getLogger("ssh_ids").error("Unable to start: %s", error)
+        print(f"ERROR: {error}", file=sys.stderr)
+        return 2
 
 
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    raise SystemExit(main())
